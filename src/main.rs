@@ -1,46 +1,49 @@
-//playing with shapes (Mesh, MeshMaterial) and ButtonInput Resource.
 use bevy::prelude::*;
 
-#[derive(Component)]
-struct Player;
-
-fn main(){
+fn main() {
     let mut app = App::new();
     app.add_plugins(DefaultPlugins);
-    app.add_systems(Startup,setup);
-    app.add_systems(Update, move_player);
+    app.add_systems(Startup, (spawn_camera, spawn_floor, spot_light, spawn_player));
     app.run();
 }
 
-fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<ColorMaterial>>) {
-    commands.spawn(Camera2d);
-    let shape = meshes.add(Circle::new(50.0));  
-    let color = materials.add(Color::hsl(210.0, 0.8, 0.5));
+fn spawn_camera(mut commands: Commands) {
     commands.spawn((
-        Mesh2d(shape),
-        MeshMaterial2d(color),
-        Transform::from_translation(Vec3::new(-100.0, -200.0, 0.0)),
-        Player,
+        Camera3d::default(),
+        Transform::from_translation(Vec3::new(-2.5, 4.0, 9.0)).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 }
 
-fn move_player(
-    mut transform: Query<&mut Transform, With<Player>>,
-    keys: Res<ButtonInput<KeyCode>>,
-    time: Res<Time>,
+fn spot_light(mut commands: Commands) {
+    commands.spawn((
+        PointLight {
+            shadows_enabled: true, // Turn on shadows for this light
+            ..default()
+        },
+        Transform::from_xyz(0.0, 8.0, 4.0),
+    ));
+}
+
+fn spawn_floor(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    println!("Move Player System Running");
-    let speed = 200.0;
-    let mut direction = 0.0;
+    let floor_mesh = meshes.add(Circle::new(4.0));
+    let floor_material = materials.add(Color::WHITE);
+    commands.spawn((
+        Mesh3d(floor_mesh),
+        MeshMaterial3d(floor_material),
+        Transform::from_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
+    ));
+}
 
-    if keys.pressed(KeyCode::ArrowLeft) {
-        direction -= 1.0;
-    }
-    if keys.pressed(KeyCode::ArrowRight) {
-        direction += 1.0;
-    }
-
-    for mut t in transform.iter_mut() {
-        t.translation.x += direction * speed * time.delta_secs();
-    }
+fn spawn_player(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<StandardMaterial>>) {
+    let player_mesh = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
+    let player_material = materials.add(Color::srgb(0.8, 0.2, 0.2));
+    commands.spawn((
+        Mesh3d(player_mesh),
+        MeshMaterial3d(player_material),
+        Transform::from_translation(Vec3::new(0.0, 0.5, 0.0)),
+    ));
 }
