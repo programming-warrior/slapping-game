@@ -11,36 +11,40 @@ impl Plugin for PlayerMovementPlugin{
 
 
 fn player_movement(player: Single<(&mut Velocity, &mut Transform), With<Player>>, keys: Res<ButtonInput<KeyCode>>, time: Res<Time> ) {
-    const SPEED: f32 = 10.0;
+    const MOVE_SPEED: f32 = 10.0;
+    const ROTATION_SPEED: f32 = 2.5;
     let (mut velocity, mut transform) = player.into_inner();
     
-    // Reset velocity
-    velocity.x = 0.0;
-    velocity.z = 0.0;
-
-    // Check for input and set velocity accordingly
-    if keys.pressed(KeyCode::KeyW) {
-        velocity.z -= 1.0; // Move forward
-    }
-    if keys.pressed(KeyCode::KeyS) {
-        velocity.z += 1.0; // Move backward
-    }
+    // Handle rotation (A/D keys)
     if keys.pressed(KeyCode::KeyA) {
-        velocity.x -= 1.0; // Move left
+        // Rotate left (counter-clockwise around Y axis)
+        transform.rotate_y(ROTATION_SPEED * time.delta_secs());
     }
     if keys.pressed(KeyCode::KeyD) {
-        velocity.x += 1.0; // Move right
+        // Rotate right (clockwise around Y axis)
+        transform.rotate_y(-ROTATION_SPEED * time.delta_secs());
     }
 
-    // Normalize the velocity to prevent faster diagonal movement
-    let length = (velocity.x.powi(2) + velocity.z.powi(2)).sqrt();
-    if length > 0.0 {
-        velocity.x /= length;
-        velocity.z /= length;
-    }
+    // Reset movement velocity
+    let mut forward_movement = 0.0;
 
-    // Apply movement to the player's transform
-    transform.translation.x += velocity.x * SPEED * time.delta_secs(); // Adjust speed as needed
-    transform.translation.z += velocity.z * SPEED * time.delta_secs(); // Adjust speed as needed
-  
+    // Handle forward/backward movement (W/S keys)
+    if keys.pressed(KeyCode::KeyW) {
+        forward_movement += 1.0; // Move forward
+    }
+    // if keys.pressed(KeyCode::KeyS) {
+    //     forward_movement -= 1.0; // Move backward
+    // }
+
+    // Calculate movement direction based on player's current rotation
+    // transform.forward() returns the direction the player is facing
+    let forward_dir = transform.forward();
+    println!("Forward direction: {:?}", forward_dir);
+    
+    // Apply movement in the direction the player is facing
+    transform.translation += forward_dir.as_vec3() * forward_movement * MOVE_SPEED * time.delta_secs();
+    
+    // Update velocity for potential future use
+    velocity.x = forward_dir.x * forward_movement;
+    velocity.z = forward_dir.z * forward_movement;
 }   
