@@ -16,7 +16,6 @@ fn mouse_look(
 )
 {
     let delta = mouse_motion.delta;
-    println!("Mouse motion delta: {:?}", delta);
 
     if delta != Vec2::ZERO {
         let sensitivity = 0.002; // Adjust this for faster/slower look
