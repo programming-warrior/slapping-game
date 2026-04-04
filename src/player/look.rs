@@ -1,6 +1,6 @@
+use bevy::input::mouse::AccumulatedMouseMotion;
 use bevy::prelude::*;
-use bevy::input::mouse::MouseMotion;
-use crate::components::{Player, Velocity, LookAngles};
+use crate::components::{LookAngles, Player};
 
 pub struct PlayerLookPlugin;
 
@@ -11,14 +11,12 @@ impl Plugin for PlayerLookPlugin {
 }
 
 fn mouse_look(
-    mut mouse_events: MessageReader<MouseMotion>,
+    mouse_motion: Res<AccumulatedMouseMotion>,
     mut query: Query<(&mut Transform, &mut LookAngles), With<Player>>
 )
 {
-    let mut delta = Vec2::ZERO;
-    for event in mouse_events.read() {
-        delta += event.delta;
-    }
+    let delta = mouse_motion.delta;
+    println!("Mouse motion delta: {:?}", delta);
 
     if delta != Vec2::ZERO {
         let sensitivity = 0.002; // Adjust this for faster/slower look
@@ -36,4 +34,14 @@ fn mouse_look(
         }
     }
 }
+
+// fn sync_look_angles_from_transform(
+//     mut query: Query<(&Transform, &mut LookAngles), With<Player>>,
+// ) {
+//     for (transform, mut angles) in query.iter_mut() {
+//         let (yaw, pitch, _roll) = transform.rotation.to_euler(EulerRot::YXZ);
+//         angles.yaw = yaw;
+//         angles.pitch = pitch;
+//     }
+// }
 

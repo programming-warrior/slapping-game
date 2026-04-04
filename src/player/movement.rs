@@ -16,17 +16,25 @@ fn player_movement(
 ) {
     for (mut transform, velocity) in query.iter_mut() {
         let mut direction = Vec3::ZERO;
+        let mut forward = *transform.forward();
+        forward.y = 0.0;
+        let forward = forward.normalize_or_zero();
+
+        let mut right = *transform.right();
+        right.y = 0.0;
+        let right = right.normalize_or_zero();
+
         if keyboard_input.pressed(KeyCode::KeyW) {
-            direction += *transform.forward();
+            direction += forward;
         }
         if keyboard_input.pressed(KeyCode::KeyS) {
-            direction -= *transform.forward();
+            direction -= forward;
         }
         if keyboard_input.pressed(KeyCode::KeyA) {
-            direction -= *transform.right();
+            direction -= right;
         }
         if keyboard_input.pressed(KeyCode::KeyD) {
-            direction += *transform.right();
+            direction += right;
         }
 
         if direction != Vec3::ZERO {

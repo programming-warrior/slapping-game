@@ -24,7 +24,7 @@ fn spawn_player_camera(
         Camera3d::default(),
         Transform::from_translation(Vec3::new(0.0, 2.0, 5.0)).looking_at(Vec3::ZERO, Vec3::Y),
         Player,
-        Velocity { speed: 0.0 },
+        Velocity { speed: 6.0 },
         LookAngles { yaw: 0.0, pitch: 0.0 },
     ));
 }
