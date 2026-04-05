@@ -5,6 +5,9 @@ edition = "2024"
 
 [dependencies]
 bevy = "0.18.0"
+bevy_renet = "3"
+serde = { version = "1", features = ["derive"] }
+bincode = "1"
 
 # copied from bevy documentation
 [profile.dev]
