@@ -4,8 +4,7 @@ use bevy_renet::renet::{ConnectionConfig, DefaultChannel, RenetServer};
 use std::net::UdpSocket;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::network::client::{PROTOCOL_ID, SERVER_ADDR};
-use crate::network::protocol::ClientMessage;
+use crate::shared::protocol::{PROTOCOL_ID, SERVER_ADDR, ClientMessage};
 
 #[derive(Resource)]
 pub struct NetworkServer(pub RenetServer);

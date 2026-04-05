@@ -1,6 +1,6 @@
 use bevy::input::mouse::AccumulatedMouseMotion;
 use bevy::prelude::*;
-use crate::components::{LookAngles, Player};
+use crate::shared::components::{LookAngles, Player};
 
 pub struct PlayerLookPlugin;
 

@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use crate::components::{Health, Target};
+use crate::shared::components::{Health, Target};
 pub struct HealthPlugin;
 
 impl Plugin for HealthPlugin{

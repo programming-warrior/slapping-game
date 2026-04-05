@@ -1,9 +1,9 @@
 use bevy::prelude::*;
-use slapping_game::network::server::{new_server, receive_updates, send_server_packets, update_server_transport};
 
-fn main() {
+use slapping_game::server::network::{new_server, receive_updates, send_server_packets, update_server_transport};
+
+fn main(){
     let (server, transport) = new_server();
-
     App::new()
         .add_plugins(MinimalPlugins)
         .insert_resource(server)

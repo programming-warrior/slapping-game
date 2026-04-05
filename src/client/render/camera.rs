@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
-use crate::components::{LookAngles, Player, Velocity};
+use crate::shared::components::{LookAngles, Player, Velocity};
 
 pub struct CameraPlugin;
 

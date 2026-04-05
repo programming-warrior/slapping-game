@@ -3,8 +3,13 @@ name = "slapping-game"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = ["client"]
+client = ["bevy/default"]
+server = []
+
 [dependencies]
-bevy = "0.18.0"
+bevy = { version = "0.18.0", default-features = false, features = ["bevy_core_pipeline", "bevy_render"] }
 bevy_renet = "3"
 serde = { version = "1", features = ["derive"] }
 bincode = "1"

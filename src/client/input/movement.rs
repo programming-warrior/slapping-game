@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 use bevy_renet::renet::DefaultChannel;
 
-use crate::components::{Player, Velocity};
-use crate::network::client::NetworkClient;
-use crate::network::protocol::ClientMessage;
+use crate::shared::components::{Player, Velocity};
+use crate::client::network::NetworkClient;
+use crate::shared::protocol::ClientMessage;
 
 pub struct PlayerMovementPlugin;
 

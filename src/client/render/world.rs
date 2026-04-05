@@ -3,7 +3,7 @@ use bevy::math::primitives::Cuboid;
 
 pub struct WorldPlugin;
 
-use crate::components::{Health, Target};
+use crate::shared::components::{Health, Target};
 
 impl Plugin for WorldPlugin{
     fn build(&self, app: &mut App){

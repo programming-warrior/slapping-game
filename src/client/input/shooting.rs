@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use crate::components::*;
+use crate::shared::components::*;
 
 pub struct PlayerShootingPlugin;
 impl Plugin for PlayerShootingPlugin {
