@@ -11,7 +11,7 @@ impl Plugin for HealthPlugin{
 fn health_system(mut commands: Commands, mut query: Query<(Entity, &mut Health), With<Target>>) {
     for (entity, mut health) in query.iter_mut() {
         if health.current <= 0 {
-            info!("Target {:?} destroyed!", entity);
+            println!("Target {:?} destroyed!", entity);
             commands.entity(entity).despawn();
         }
     }

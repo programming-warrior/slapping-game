@@ -9,6 +9,8 @@ pub enum ClientMessage {
 }
 
 #[derive(Serialize, Deserialize)]
-pub enum ServerMessage { 
-    PlayerPosition {id: u64, x: f32, y: f32, z: f32}
+pub enum ServerMessage {
+    PlayerPosition { id: u64, x: f32, y: f32, z: f32 },
+    PlayerConnected { id: u64 },
+    PlayerDisconnected { id: u64 },
 }
