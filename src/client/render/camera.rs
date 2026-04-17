@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
+use crate::client::network::LocalClientId;
 use crate::shared::components::{LookAngles, Player, Velocity};
 
 pub struct CameraPlugin;
@@ -14,6 +15,7 @@ impl Plugin for CameraPlugin {
 fn spawn_player_camera(
     mut commands: Commands,
     mut windows: Query<(&mut Window, &mut CursorOptions), With<PrimaryWindow>>,
+    client_id: Res<LocalClientId>,
 ) {
     if let Ok((_window, mut cursor_options)) = windows.single_mut() {
         cursor_options.visible = false; // Hide the cursor for better immersion
@@ -23,7 +25,7 @@ fn spawn_player_camera(
     commands.spawn((
         Camera3d::default(),
         Transform::from_translation(Vec3::new(0.0, 2.0, 5.0)).looking_at(Vec3::ZERO, Vec3::Y),
-        Player,
+        Player { id: client_id.0 },
         Velocity { speed: 6.0 },
         LookAngles { yaw: 0.0, pitch: 0.0 },
     ));

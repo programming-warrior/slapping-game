@@ -1,14 +1,16 @@
 use bevy::prelude::*;
 use slapping_game::client::render::camera::CameraPlugin;
 use slapping_game::combat::health::HealthPlugin;
-use slapping_game::client::network::{new_client, NetworkClient, NetworkClientTransport, receive_updates};
+use slapping_game::client::network::{
+    new_client, receive_updates, NetworkClient, NetworkClientTransport,
+};
 use slapping_game::client::input::look::PlayerLookPlugin;
 use slapping_game::client::input::movement::PlayerMovementPlugin;
 use slapping_game::client::input::shooting::PlayerShootingPlugin;
 use slapping_game::client::render::world::WorldPlugin;
 
 fn main() {
-    let (client, transport) = new_client();
+    let (client, transport, client_id) = new_client();
 
     App::new()
         .add_plugins((
@@ -22,6 +24,7 @@ fn main() {
         ))
         .insert_resource(client)
         .insert_resource(transport)
+        .insert_resource(client_id)
         .add_systems(PreUpdate, update_client_transport)
         .add_systems(Update, receive_updates)
         .add_systems(PostUpdate, send_client_packets)

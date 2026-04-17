@@ -3,19 +3,29 @@ use bevy_renet::netcode::{NetcodeServerTransport, ServerAuthentication, ServerCo
 use bevy_renet::renet::{ConnectionConfig, DefaultChannel, RenetServer};
 use std::collections::HashMap;
 use std::net::UdpSocket;
+use {serde::{Serialize, Deserialize}};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::shared::protocol::{PROTOCOL_ID, SERVER_ADDR, ClientMessage};
 
-pub struct Player {
+use crate::shared::protocol::{PROTOCOL_ID, SERVER_ADDR, ClientMoveMessage, ClientLookMessage, PlayerState};
+
+#[derive(Serialize, Deserialize)]
+pub struct PlayerInput{
     pub id: u64,
     pub x: f32,
     pub y: f32,
     pub z: f32,
+    pub direction: Vec3,
+    pub look: (f32, f32), //yaw, pitch
 }
 
 #[derive(Resource)]
-pub struct Players(pub HashMap<u64, Player>);
+pub struct PlayerInputs(pub HashMap<u64, PlayerInput>);
+
+
+
+#[derive(Resource)]
+pub struct Players(pub HashMap<u64, PlayerState>);
 
 #[derive(Resource)]
 pub struct NetworkServer(pub RenetServer);
@@ -42,33 +52,6 @@ pub fn new_server() -> (NetworkServer, NetworkServerTransport) {
     (NetworkServer(server), NetworkServerTransport(transport))
 }
 
-pub fn receive_updates(mut server: ResMut<NetworkServer>, mut players: ResMut<Players>) {
-    for client_id in server.0.clients_id() {
-        while let Some(message) = server.0.receive_message(client_id, DefaultChannel::ReliableOrdered) {
-            let msg: ClientMessage = bincode::deserialize(&message).unwrap();
-            match msg {
-                ClientMessage::Input { forward, right } => {
-                    println!("Client {} input: forward {}, right {}", client_id, forward, right);
-                    let mut current_player = players.0.get_mut(&client_id).unwrap();
-                    current_player.z += forward * 0.1; 
-                    current_player.x += right * 0.1; 
-
-                    let payload = bincode::serialize(&crate::shared::protocol::ServerMessage::PlayerPosition {
-                        id: client_id,
-                        x: current_player.x,
-                        y: current_player.y,
-                        z: current_player.z,
-                    }).expect("failed to serialize PlayerPosition");
-                    for target_id in server.0.clients_id() {
-                        if target_id != client_id {
-                            server.0.send_message(target_id, DefaultChannel::ReliableOrdered, payload.clone());
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 
 pub fn update_server_transport(
     time: Res<Time>,

@@ -3,7 +3,7 @@ use bevy_renet::renet::DefaultChannel;
 
 use crate::shared::components::{Player, Velocity};
 use crate::client::network::NetworkClient;
-use crate::shared::protocol::ClientMessage;
+use crate::shared::protocol::{ClientMessage, ClientMoveMessage};
 
 pub struct PlayerMovementPlugin;
 
@@ -43,17 +43,18 @@ fn player_movement(
         }
 
         if direction != Vec3::ZERO {
-            let speed = velocity.speed;
-            transform.translation += direction.normalize() * speed * time.delta_secs();
+            //DON'T MOVE THE PLAYER DIRECTLY, INSTEAD SEND THE INPUT TO THE SERVER AND LET THE SERVER UPDATE THE POSITION
 
+            // let speed = velocity.speed;
+            // transform.translation += direction.normalize() * speed * time.delta_secs();
             //send the message to the server
-            let msg = ClientMessage::Input { 
-                forward: if keyboard_input.pressed(KeyCode::KeyW) { 1.0 } else if keyboard_input.pressed(KeyCode::KeyS) { -1.0 } else { 0.0 },
-                right: if keyboard_input.pressed(KeyCode::KeyD) { 1.0 } else if keyboard_input.pressed(KeyCode::KeyA) { -1.0 } else { 0.0 },
-            };
+
+            let msg = ClientMessage::Move(ClientMoveMessage {
+                direction: direction.normalize(),
+            });
             let serialized_msg = bincode::serialize(&msg).unwrap();
-            
-            client.0.send_message(DefaultChannel::ReliableOrdered, serialized_msg);
+            println!("Sending movement message: {:?}", msg);
+            client.0.send_message(DefaultChannel::Unreliable, serialized_msg);
         }
     }
 }

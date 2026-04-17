@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::net::UdpSocket;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::shared::components::RemotePlayer;
+use crate::shared::components::{RemotePlayer, Player};
 use crate::shared::protocol::{PROTOCOL_ID, SERVER_ADDR, ServerMessage};
 
 #[derive(Resource)]
@@ -14,7 +14,10 @@ pub struct NetworkClient(pub RenetClient);
 #[derive(Resource)]
 pub struct NetworkClientTransport(pub NetcodeClientTransport);
 
-pub fn new_client() -> (NetworkClient, NetworkClientTransport) {
+#[derive(Resource)]
+pub struct LocalClientId(pub u64);
+
+pub fn new_client() -> (NetworkClient, NetworkClientTransport, LocalClientId) {
     let server_addr = SERVER_ADDR.parse().unwrap();
     let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
     let current_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
@@ -30,13 +33,17 @@ pub fn new_client() -> (NetworkClient, NetworkClientTransport) {
     let transport = NetcodeClientTransport::new(current_time, authentication, socket).unwrap();
     let client = RenetClient::new(ConnectionConfig::default());
 
-    (NetworkClient(client), NetworkClientTransport(transport))
+    (
+        NetworkClient(client),
+        NetworkClientTransport(transport),
+        LocalClientId(client_id),
+    )
 }
 
 
 pub fn receive_updates(
     mut client_wrapper: ResMut<NetworkClient>,
-    mut query: Query<(Entity, &mut Transform, &RemotePlayer)>,
+    mut query: Query<(Entity, &mut Transform, &mut Player)>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -45,6 +52,8 @@ pub fn receive_updates(
 
     while let Some(message) = client.receive_message(DefaultChannel::ReliableOrdered) {
         let msg: ServerMessage = bincode::deserialize(&message).unwrap();
+        
+        println!("Received message from server: {:?}", msg);
 
         let existing_players: HashMap<u64, Entity> = query
             .iter()
@@ -52,20 +61,17 @@ pub fn receive_updates(
             .collect();
 
         match msg {
-            ServerMessage::PlayerPosition { id, x, y, z } => {
-                if let Some(&entity) = existing_players.get(&id) {
-                    if let Ok((_, mut transform, _)) = query.get_mut(entity) {
-                        transform.translation = Vec3::new(x, y, z);
+            ServerMessage::GameState { players } => {
+                for player in players {
+                    if let Some(&entity) = existing_players.get(&player.id) {
+                        if let Ok((_, mut transform, _)) = query.get_mut(entity) {
+                            transform.translation = Vec3::new(player.x, player.y, player.z);
+                            transform.rotation = Quat::from_axis_angle(Vec3::Y, player.look.0) * Quat::from_axis_angle(Vec3::X, player.look.1);
+                        }
                     }
-                } else {
-                    commands.spawn((
-                        Mesh3d(meshes.add(Mesh::from(Capsule3d::new(0.5, 1.0)))),
-                        MeshMaterial3d(materials.add(Color::WHITE)),
-                        Transform::from_translation(Vec3::new(x, y, z)),
-                        RemotePlayer { id },
-                    ));
                 }
             }
+    
             ServerMessage::PlayerConnected { id } => {
                    commands.spawn((
                         Mesh3d(meshes.add(Mesh::from(Capsule3d::new(0.5, 1.0)))),

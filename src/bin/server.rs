@@ -1,12 +1,11 @@
 use bevy::prelude::*;
 use bevy_renet::renet::*;
 use slapping_game::server::network::{
-    new_server, receive_updates, send_server_packets, update_server_transport, NetworkServer,
-    NetworkServerTransport, Player, Players,
+    new_server, send_server_packets, update_server_transport, NetworkServer,
+    NetworkServerTransport, Players, PlayerInput, PlayerInputs
 };
 use std::collections::HashMap;
-
-use slapping_game::shared::protocol::ServerMessage;
+use slapping_game::shared::protocol::{ClientMessage, PlayerState, ServerMessage};
 
 fn main(){
     let (server, transport) = new_server();
@@ -15,8 +14,9 @@ fn main(){
         .insert_resource(server)
         .insert_resource(transport)
         .insert_resource(Players(HashMap::new()))
+        .insert_resource(PlayerInputs(HashMap::new()))
         .add_systems(PreUpdate, update_server_transport)
-        .add_systems(Update, (manage_connections,receive_updates))
+        .add_systems(Update, (manage_connections,receive_updates, update_players, broadcast_updates).chain())
         .add_systems(PostUpdate, send_server_packets)
         .run();
 }
@@ -29,16 +29,19 @@ fn manage_connections(mut server_wrapper: ResMut<NetworkServer>, mut players: Re
                 println!("Client {} connected", client_id);
                 players.0.insert(
                     client_id,
-                    Player {
+                    PlayerState {
                         id: client_id,
                         x: 0.0,
-                        y: 0.0,
-                        z: 0.0,
+                        y: -10.0,
+                        z: -5.0,
+                        direction: Vec3::new(0.0, -10.0, -5.0),
+                        look: (0.0, 0.0),
                     },
                 );
 
                 let payload = bincode::serialize(&ServerMessage::PlayerConnected { id: client_id })
                     .expect("failed to serialize PlayerConnected");
+                // server.broadcast_message(DefaultChannel::ReliableOrdered, payload.clone());
                 for target_id in server.clients_id() {
                     if target_id != client_id {
                         server.send_message(target_id, DefaultChannel::ReliableOrdered, payload.clone());
@@ -60,4 +63,80 @@ fn manage_connections(mut server_wrapper: ResMut<NetworkServer>, mut players: Re
             }
         }
     }
+}
+
+
+
+pub fn receive_updates(mut server: ResMut<NetworkServer>, mut inputs: ResMut<PlayerInputs>) {
+    println!("Checking for messages from clients...{}", server.0.clients_id().len());
+    for client_id in server.0.clients_id() {
+        println!("Checking messages from client {}...", client_id);
+        while let Some(message) = server.0.receive_message(client_id, DefaultChannel::Unreliable) {
+            let msg: ClientMessage = bincode::deserialize(&message).unwrap();
+            println!("Received message from client {}: {:?}", client_id, msg);
+            match msg {
+                ClientMessage::Move(m) => {
+                    let (x, y, z, look) = if let Some(previous_data) = inputs.0.get(&client_id) {
+                        (previous_data.x, previous_data.y, previous_data.z, previous_data.look)
+                    } else {
+                        (0.0, 0.0, 0.0, (0.0, 0.0))
+                    };
+                    inputs.0.insert(client_id, PlayerInput {
+                        id: client_id,
+                        x,
+                        y,
+                        z,
+                        direction: m.direction,
+                        look,
+                    });
+                }
+                ClientMessage::Look(m) => {
+                    let (x, y, z, direction) = if let Some(previous_data) = inputs.0.get(&client_id) {
+                        (
+                            previous_data.x,
+                            previous_data.y,
+                            previous_data.z,
+                            previous_data.direction,
+                        )
+                    } else {
+                        (0.0, 0.0, 0.0, Vec3::ZERO)
+                    };
+                    inputs.0.insert(client_id, PlayerInput {
+                        id: client_id,
+                        x,
+                        y,
+                        z,
+                        direction,
+                        look: (m.0, m.1),
+                    });
+                }
+            }
+        }
+    }
+}
+
+pub fn update_players(mut players: ResMut<Players>, inputs: ResMut<PlayerInputs>, time: Res<Time>) {
+    const SPEED: f32 = 50.0; //MOVEMENT SPEED OF THE PLAYER
+    for(client_id, input) in inputs.0.iter(){
+        if let Some(player) = players.0.get_mut(client_id){
+            player.x += input.direction.x * SPEED * time.delta_secs();
+            player.z += input.direction.z * SPEED * time.delta_secs();
+            //yaw
+            player.look.0 = input.look.0;
+            //pitch
+            player.look.1 = player.look.1.clamp(-std::f32::consts::FRAC_PI_2 + 0.01, std::f32::consts::FRAC_PI_2 - 0.01);
+            player.look.1 = input.look.1;
+        }
+    }
+}
+
+
+pub fn broadcast_updates(mut server_wrapper: ResMut<NetworkServer>, players: ResMut<Players>) {
+    let server= &mut server_wrapper.0;
+    let game_state: Vec<PlayerState> = players.0.iter().map(|(_client_id, state): (&u64, &PlayerState)| state.clone()).collect(); 
+    let msg: ServerMessage = ServerMessage::GameState { players: game_state };
+    let serialized_msg = bincode::serialize(&msg).unwrap();
+
+    println!("Broadcasting game state to {} clients", server.clients_id().len());
+    server.broadcast_message(DefaultChannel::ReliableOrdered, serialized_msg);
 }
