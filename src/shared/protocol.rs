@@ -24,7 +24,6 @@ pub struct PlayerState {
     pub x: f32,
     pub y: f32,
     pub z: f32,
-    pub direction: Vec3,
     pub look: (f32, f32), //yaw, pitch
 }
 

@@ -38,7 +38,6 @@ fn manage_connections(mut server_wrapper: ResMut<NetworkServer>, mut players: Re
                         x: 0.0,
                         y: 2.0,
                         z: 5.0,
-                        direction: Vec3::new(0.0, 1.0, -5.0),
                         look: (0.0, 0.0),
                     },
                 );
@@ -86,9 +85,6 @@ pub fn receive_updates(mut server: ResMut<NetworkServer>, mut inputs: ResMut<Pla
             
                     inputs.0.insert(client_id, PlayerInput {
                         id: client_id,
-                        x: m.direction.x,
-                        y: m.direction.y,
-                        z: m.direction.z,
                         direction: m.direction,
                         look: look,
                     });
@@ -97,9 +93,6 @@ pub fn receive_updates(mut server: ResMut<NetworkServer>, mut inputs: ResMut<Pla
                     
                     inputs.0.insert(client_id, PlayerInput {
                         id: client_id,
-                        x:0.0,
-                        y:0.0,
-                        z:0.0,
                         direction: Vec3::ZERO,
                         look: (m.0, m.1),
                     });

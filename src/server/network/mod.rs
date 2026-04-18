@@ -12,9 +12,6 @@ use crate::shared::protocol::{PROTOCOL_ID, SERVER_ADDR, ClientMoveMessage, Clien
 #[derive(Serialize, Deserialize)]
 pub struct PlayerInput{
     pub id: u64,
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
     pub direction: Vec3,
     pub look: (f32, f32), //yaw, pitch
 }
