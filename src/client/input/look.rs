@@ -33,7 +33,7 @@ fn mouse_look(
         angles.pitch -= delta.y * sensitivity;
         angles.pitch = angles.pitch.clamp(-std::f32::consts::FRAC_PI_2 + 0.01, std::f32::consts::FRAC_PI_2 - 0.01); // Prevent flipping
 
-        // transform.rotation = Quat::from_axis_angle(Vec3::Y, angles.yaw) * Quat::from_axis_angle(Vec3::X, angles.pitch);
+        transform.rotation = Quat::from_axis_angle(Vec3::Y, angles.yaw) * Quat::from_axis_angle(Vec3::X, angles.pitch);
 
         let payload = ClientMessage::Look(ClientLookMessage(angles.yaw, angles.pitch));
 
@@ -42,13 +42,5 @@ fn mouse_look(
     }
 }
 
-// fn sync_look_angles_from_transform(
-//     mut query: Query<(&Transform, &mut LookAngles), With<Player>>,
-// ) {
-//     for (transform, mut angles) in query.iter_mut() {
-//         let (yaw, pitch, _roll) = transform.rotation.to_euler(EulerRot::YXZ);
-//         angles.yaw = yaw;
-//         angles.pitch = pitch;
-//     }
-// }
+
 

@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 use bevy_renet::renet::*;
+use bevy_renet::RenetServerPlugin;
+use bevy_renet::netcode::NetcodeServerPlugin;
 use slapping_game::server::network::{
     new_server, send_server_packets, update_server_transport, NetworkServer,
     NetworkServerTransport, Players, PlayerInput, PlayerInputs
@@ -11,6 +13,8 @@ fn main(){
     let (server, transport) = new_server();
     App::new()
         .add_plugins(MinimalPlugins)
+        .add_plugins(RenetServerPlugin)
+        .add_plugins(NetcodeServerPlugin)
         .insert_resource(server)
         .insert_resource(transport)
         .insert_resource(Players(HashMap::new()))
@@ -32,9 +36,9 @@ fn manage_connections(mut server_wrapper: ResMut<NetworkServer>, mut players: Re
                     PlayerState {
                         id: client_id,
                         x: 0.0,
-                        y: -10.0,
-                        z: -5.0,
-                        direction: Vec3::new(0.0, -10.0, -5.0),
+                        y: 2.0,
+                        z: 5.0,
+                        direction: Vec3::new(0.0, 1.0, -5.0),
                         look: (0.0, 0.0),
                     },
                 );
@@ -67,46 +71,36 @@ fn manage_connections(mut server_wrapper: ResMut<NetworkServer>, mut players: Re
 
 
 
-pub fn receive_updates(mut server: ResMut<NetworkServer>, mut inputs: ResMut<PlayerInputs>) {
-    println!("Checking for messages from clients...{}", server.0.clients_id().len());
+pub fn receive_updates(mut server: ResMut<NetworkServer>, mut inputs: ResMut<PlayerInputs>, mut players: ResMut<Players>) {
     for client_id in server.0.clients_id() {
-        println!("Checking messages from client {}...", client_id);
         while let Some(message) = server.0.receive_message(client_id, DefaultChannel::Unreliable) {
             let msg: ClientMessage = bincode::deserialize(&message).unwrap();
             println!("Received message from client {}: {:?}", client_id, msg);
             match msg {
                 ClientMessage::Move(m) => {
-                    let (x, y, z, look) = if let Some(previous_data) = inputs.0.get(&client_id) {
-                        (previous_data.x, previous_data.y, previous_data.z, previous_data.look)
+                    let  look = if let Some(previous_data) = players.0.get(&client_id) {
+                        previous_data.look
                     } else {
-                        (0.0, 0.0, 0.0, (0.0, 0.0))
+                         (0.0, 0.0)
                     };
+            
                     inputs.0.insert(client_id, PlayerInput {
                         id: client_id,
-                        x,
-                        y,
-                        z,
+                        x: m.direction.x,
+                        y: m.direction.y,
+                        z: m.direction.z,
                         direction: m.direction,
-                        look,
+                        look: look,
                     });
                 }
                 ClientMessage::Look(m) => {
-                    let (x, y, z, direction) = if let Some(previous_data) = inputs.0.get(&client_id) {
-                        (
-                            previous_data.x,
-                            previous_data.y,
-                            previous_data.z,
-                            previous_data.direction,
-                        )
-                    } else {
-                        (0.0, 0.0, 0.0, Vec3::ZERO)
-                    };
+                    
                     inputs.0.insert(client_id, PlayerInput {
                         id: client_id,
-                        x,
-                        y,
-                        z,
-                        direction,
+                        x:0.0,
+                        y:0.0,
+                        z:0.0,
+                        direction: Vec3::ZERO,
                         look: (m.0, m.1),
                     });
                 }
@@ -116,7 +110,7 @@ pub fn receive_updates(mut server: ResMut<NetworkServer>, mut inputs: ResMut<Pla
 }
 
 pub fn update_players(mut players: ResMut<Players>, inputs: ResMut<PlayerInputs>, time: Res<Time>) {
-    const SPEED: f32 = 50.0; //MOVEMENT SPEED OF THE PLAYER
+    const SPEED: f32 = 6.0; //MOVEMENT SPEED OF THE PLAYER
     for(client_id, input) in inputs.0.iter(){
         if let Some(player) = players.0.get_mut(client_id){
             player.x += input.direction.x * SPEED * time.delta_secs();
@@ -131,12 +125,17 @@ pub fn update_players(mut players: ResMut<Players>, inputs: ResMut<PlayerInputs>
 }
 
 
-pub fn broadcast_updates(mut server_wrapper: ResMut<NetworkServer>, players: ResMut<Players>) {
+pub fn broadcast_updates(mut server_wrapper: ResMut<NetworkServer>,mut inputs: ResMut<PlayerInputs>, mut players: ResMut<Players>) {
+    if inputs.0.len() == 0 {
+        return;
+    }
     let server= &mut server_wrapper.0;
     let game_state: Vec<PlayerState> = players.0.iter().map(|(_client_id, state): (&u64, &PlayerState)| state.clone()).collect(); 
     let msg: ServerMessage = ServerMessage::GameState { players: game_state };
     let serialized_msg = bincode::serialize(&msg).unwrap();
 
+    //clear the inputs
+    inputs.0.clear();
     println!("Broadcasting game state to {} clients", server.clients_id().len());
     server.broadcast_message(DefaultChannel::ReliableOrdered, serialized_msg);
 }

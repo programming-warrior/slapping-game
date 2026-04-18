@@ -23,9 +23,3 @@ pub struct Target;
 pub struct Health{
     pub current: i32
 }
-
-
-#[derive(Component)]
-pub struct RemotePlayer {
-    pub id: u64,
-}

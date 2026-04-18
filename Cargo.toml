@@ -10,7 +10,7 @@ server = []
 
 [dependencies]
 bevy = { version = "0.18.0", default-features = false, features = ["bevy_core_pipeline", "bevy_render"] }
-bevy_renet = "3"
+bevy_renet = "4.0.1"
 serde = { version = "1", features = ["derive"] }
 bincode = "1"
 

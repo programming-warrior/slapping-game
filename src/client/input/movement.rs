@@ -27,6 +27,8 @@ fn player_movement(
 
         let mut right = *transform.right();
         right.y = 0.0;
+
+        println!("Forward vector: {:?}, Right vector: {:?}", forward, right);   
         let right = right.normalize_or_zero();
 
         if keyboard_input.pressed(KeyCode::KeyW) {
@@ -41,16 +43,15 @@ fn player_movement(
         if keyboard_input.pressed(KeyCode::KeyD) {
             direction += right;
         }
-
         if direction != Vec3::ZERO {
-            //DON'T MOVE THE PLAYER DIRECTLY, INSTEAD SEND THE INPUT TO THE SERVER AND LET THE SERVER UPDATE THE POSITION
+            println!("Calculated movement direction: {:?}", direction);
+            let direction = direction.normalize();
 
-            // let speed = velocity.speed;
-            // transform.translation += direction.normalize() * speed * time.delta_secs();
-            //send the message to the server
+            // Move local player immediately for responsive controls.
+            transform.translation += direction * velocity.speed * time.delta_secs();
 
             let msg = ClientMessage::Move(ClientMoveMessage {
-                direction: direction.normalize(),
+                direction,
             });
             let serialized_msg = bincode::serialize(&msg).unwrap();
             println!("Sending movement message: {:?}", msg);

@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::net::UdpSocket;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::shared::components::{RemotePlayer, Player};
+use crate::shared::components::{Player};
 use crate::shared::protocol::{PROTOCOL_ID, SERVER_ADDR, ServerMessage};
 
 #[derive(Resource)]
@@ -43,7 +43,8 @@ pub fn new_client() -> (NetworkClient, NetworkClientTransport, LocalClientId) {
 
 pub fn receive_updates(
     mut client_wrapper: ResMut<NetworkClient>,
-    mut query: Query<(Entity, &mut Transform, &mut Player)>,
+    local_client_id: Res<LocalClientId>,
+    mut query: Query<(Entity, &mut Transform, &Player)>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -53,7 +54,7 @@ pub fn receive_updates(
     while let Some(message) = client.receive_message(DefaultChannel::ReliableOrdered) {
         let msg: ServerMessage = bincode::deserialize(&message).unwrap();
         
-        println!("Received message from server: {:?}", msg);
+        // println!("Received message from server: {:?}", msg);
 
         let existing_players: HashMap<u64, Entity> = query
             .iter()
@@ -63,6 +64,10 @@ pub fn receive_updates(
         match msg {
             ServerMessage::GameState { players } => {
                 for player in players {
+                    if player.id == local_client_id.0 {
+                        continue;
+                    }
+
                     if let Some(&entity) = existing_players.get(&player.id) {
                         if let Ok((_, mut transform, _)) = query.get_mut(entity) {
                             transform.translation = Vec3::new(player.x, player.y, player.z);
@@ -73,11 +78,14 @@ pub fn receive_updates(
             }
     
             ServerMessage::PlayerConnected { id } => {
-                   commands.spawn((
+                if id != local_client_id.0 && !existing_players.contains_key(&id) {
+                    commands.spawn((
                         Mesh3d(meshes.add(Mesh::from(Capsule3d::new(0.5, 1.0)))),
                         MeshMaterial3d(materials.add(Color::WHITE)),
-                        RemotePlayer { id },
+                        Transform::from_xyz(0.0, 1.0, -5.0),
+                        Player { id },
                     ));
+                }
             }
             ServerMessage::PlayerDisconnected { id } => {
                 println!("Player {} disconnected", id);
