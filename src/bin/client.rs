@@ -36,12 +36,22 @@ fn update_client_transport(
     mut transport: ResMut<NetworkClientTransport>,
     mut client: ResMut<NetworkClient>,
 ) {
-    transport.0.update(time.delta(), &mut client.0).unwrap();
+    if let Err(err) = transport.0.update(time.delta(), &mut client.0) {
+        let err_text = format!("{err:?}");
+        if !err_text.contains("ClientNotConnected") {
+            warn!("Client transport update failed: {err:?}");
+        }
+    }
 }
 
 fn send_client_packets(
     mut transport: ResMut<NetworkClientTransport>,
     mut client: ResMut<NetworkClient>,
 ) {
-    transport.0.send_packets(&mut client.0).unwrap();
+    if let Err(err) = transport.0.send_packets(&mut client.0) {
+        let err_text = format!("{err:?}");
+        if !err_text.contains("ClientNotConnected") {
+            warn!("Sending client packets failed: {err:?}");
+        }
+    }
 }

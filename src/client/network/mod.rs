@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::net::UdpSocket;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::shared::components::{Player};
+use crate::shared::components::Player;
 use crate::shared::protocol::{PROTOCOL_ID, SERVER_ADDR, ServerMessage};
 
 #[derive(Resource)]
@@ -40,7 +40,6 @@ pub fn new_client() -> (NetworkClient, NetworkClientTransport, LocalClientId) {
     )
 }
 
-
 pub fn receive_updates(
     mut client_wrapper: ResMut<NetworkClient>,
     local_client_id: Res<LocalClientId>,
@@ -53,7 +52,7 @@ pub fn receive_updates(
 
     while let Some(message) = client.receive_message(DefaultChannel::ReliableOrdered) {
         let msg: ServerMessage = bincode::deserialize(&message).unwrap();
-        
+
         // println!("Received message from server: {:?}", msg);
 
         let existing_players: HashMap<u64, Entity> = query
@@ -64,19 +63,41 @@ pub fn receive_updates(
         match msg {
             ServerMessage::GameState { players } => {
                 for player in players {
-                    if player.id == local_client_id.0 {
-                        continue;
-                    }
+                    let server_translation = Vec3::new(player.x, player.y, player.z);
+                    let server_rotation = Quat::from_axis_angle(Vec3::Y, player.look.0)
+                        * Quat::from_axis_angle(Vec3::X, player.look.1);
 
                     if let Some(&entity) = existing_players.get(&player.id) {
                         if let Ok((_, mut transform, _)) = query.get_mut(entity) {
-                            transform.translation = Vec3::new(player.x, player.y, player.z);
-                            transform.rotation = Quat::from_axis_angle(Vec3::Y, player.look.0) * Quat::from_axis_angle(Vec3::X, player.look.1);
+                            if player.id == local_client_id.0 {
+                                // Keep local controls responsive, but converge to server truth.
+                                let error = server_translation - transform.translation;
+                                let snap_distance = 1.5;
+
+                                if error.length_squared() > snap_distance * snap_distance {
+                                    transform.translation = server_translation;
+                                } else {
+                                    transform.translation = transform.translation.lerp(server_translation, 0.2);
+                                }
+                                transform.rotation = transform.rotation.slerp(server_rotation, 0.35);
+                            } else {
+                                transform.translation = transform.translation.lerp(server_translation, 0.45);
+                                transform.rotation = transform.rotation.slerp(server_rotation, 0.45);
+                            }
                         }
+                    }
+                    else{
+
+                        commands.spawn((
+                            Mesh3d(meshes.add(Mesh::from(Capsule3d::new(0.5, 1.0)))),
+                            MeshMaterial3d(materials.add(Color::WHITE)),
+                            Transform::from_xyz(player.x, player.y, player.z),
+                            Player { id: player.id }
+                        ));
                     }
                 }
             }
-    
+
             ServerMessage::PlayerConnected { id } => {
                 if id != local_client_id.0 && !existing_players.contains_key(&id) {
                     commands.spawn((
@@ -93,7 +114,6 @@ pub fn receive_updates(
                     commands.entity(entity).despawn();
                 }
             }
-
         }
     }
 }
