@@ -1,6 +1,6 @@
 use bevy::input::mouse::AccumulatedMouseMotion;
 use bevy::prelude::*;
-use crate::shared::components::{LookAngles, Player};
+use crate::shared::components::{LocalPlayer, LookAngles};
 use crate::client::network::NetworkClient;
 use crate::shared::protocol::{ClientLookMessage, ClientMessage};
 use bevy_renet::renet::DefaultChannel;
@@ -16,7 +16,7 @@ impl Plugin for PlayerLookPlugin {
 fn mouse_look(
     mouse_motion: Res<AccumulatedMouseMotion>,
     mut client_wrapper: ResMut<NetworkClient>,
-    mut query: Single<(&mut Transform, &mut LookAngles), With<Player>>
+    query: Single<(&mut Transform, &mut LookAngles), With<LocalPlayer>>
 )
 {
     let delta = mouse_motion.delta;

@@ -51,7 +51,7 @@ fn send_client_packets(
     if let Err(err) = transport.0.send_packets(&mut client.0) {
         let err_text = format!("{err:?}");
         if !err_text.contains("ClientNotConnected") {
-            warn!("Sending client packets failed: {err:?}");
+            // warn!("Sending client packets failed: {err:?}");
         }
     }
 }

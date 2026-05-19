@@ -19,8 +19,10 @@ fn main(){
         .insert_resource(transport)
         .insert_resource(Players(HashMap::new()))
         .insert_resource(PlayerInputs(HashMap::new()))
+        .insert_resource(Time::<Fixed>::from_hz(20.0))
         .add_systems(PreUpdate, update_server_transport)
-        .add_systems(Update, (manage_connections,receive_updates, update_players, broadcast_updates).chain())
+        .add_systems(Update, (manage_connections, receive_updates, update_players).chain())
+        .add_systems(FixedUpdate, broadcast_updates)
         .add_systems(PostUpdate, send_server_packets)
         .run();
 }
@@ -35,11 +37,12 @@ fn manage_connections(
         match event {
             ServerEvent::ClientConnected{client_id} => {
                 println!("Client {} connected", client_id);
+                let spawn_index = players.0.len() as f32;
                 players.0.insert(
                     client_id,
                     PlayerState {
                         id: client_id,
-                        x: 0.0,
+                        x: spawn_index * 3.0,
                         y: 2.0,
                         z: 5.0,
                         look: (0.0, 0.0),
@@ -65,9 +68,7 @@ fn manage_connections(
 
                 let payload = bincode::serialize(&ServerMessage::PlayerDisconnected { id: client_id })
                     .expect("failed to serialize PlayerDisconnected");
-                for target_id in server.clients_id() {
-                    server.send_message(target_id, DefaultChannel::ReliableOrdered, payload.clone());
-                }
+                server.broadcast_message(DefaultChannel::ReliableOrdered, payload.clone());
             }
         }
     }
@@ -79,6 +80,7 @@ pub fn receive_updates(mut server: ResMut<NetworkServer>, mut inputs: ResMut<Pla
     for client_id in server.0.clients_id() {
         while let Some(message) = server.0.receive_message(client_id, DefaultChannel::Unreliable) {
             let msg: ClientMessage = bincode::deserialize(&message).unwrap();
+        
             println!("Received message from client {}: {:?}", client_id, msg);
             match msg {
                 ClientMessage::Move(m) => {
@@ -89,7 +91,7 @@ pub fn receive_updates(mut server: ResMut<NetworkServer>, mut inputs: ResMut<Pla
                     } else {
                         (0.0, 0.0)
                     };
-            
+                    
                     inputs.0.insert(client_id, PlayerInput {
                         id: client_id,
                         direction: m.direction,
@@ -123,8 +125,8 @@ pub fn update_players(mut players: ResMut<Players>, inputs: ResMut<PlayerInputs>
             //yaw
             player.look.0 = input.look.0;
             //pitch
-            player.look.1 = player.look.1.clamp(-std::f32::consts::FRAC_PI_2 + 0.01, std::f32::consts::FRAC_PI_2 - 0.01);
             player.look.1 = input.look.1;
+            player.look.1 = player.look.1.clamp(-std::f32::consts::FRAC_PI_2 + 0.01, std::f32::consts::FRAC_PI_2 - 0.01);
         }
     }
 }
@@ -140,5 +142,5 @@ pub fn broadcast_updates(mut server_wrapper: ResMut<NetworkServer>, players: Res
     let serialized_msg = bincode::serialize(&msg).unwrap();
 
     println!("Broadcasting game state to {} clients", server.clients_id().len());
-    server.broadcast_message(DefaultChannel::ReliableOrdered, serialized_msg);
+    server.broadcast_message(DefaultChannel::Unreliable, serialized_msg);
 }

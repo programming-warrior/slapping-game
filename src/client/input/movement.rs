@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_renet::renet::DefaultChannel;
 
-use crate::shared::components::{Player, Velocity};
+use crate::shared::components::{LocalPlayer, Velocity};
 use crate::client::network::NetworkClient;
 use crate::shared::protocol::{ClientMessage, ClientMoveMessage};
 
@@ -17,7 +17,7 @@ fn player_movement(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
     mut client: ResMut<NetworkClient>,
-    mut query: Query<(&mut Transform, &Velocity), With<Player>>
+    mut query: Query<(&mut Transform, &Velocity), With<LocalPlayer>>
 ) {
     for (mut transform, velocity) in query.iter_mut() {
         let mut direction = Vec3::ZERO;

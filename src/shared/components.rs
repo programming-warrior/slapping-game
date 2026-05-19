@@ -6,6 +6,9 @@ pub struct Player {
 }
 
 #[derive(Component)]
+pub struct LocalPlayer;
+
+#[derive(Component)]
 pub struct Velocity {
     pub speed: f32,
 }

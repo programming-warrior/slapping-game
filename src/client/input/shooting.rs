@@ -11,7 +11,7 @@ impl Plugin for PlayerShootingPlugin {
 fn player_shooting(
     buttons: Res<ButtonInput<MouseButton>>, 
     mut targets: Query<(Entity, &Transform, &mut Health), With<Target>>,
-    player: Single<&Transform, With<Player>>
+    player: Single<&Transform, With<LocalPlayer>>
 ) {
     if !buttons.just_pressed(MouseButton::Left) {
         return;
